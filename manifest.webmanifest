@@ -1,0 +1,18 @@
+{
+  "name": "Rilievi Serramenti",
+  "short_name": "Rilievi",
+  "description": "Rilievo misure di serramenti, tapparelle, persiane, zanzariere e motori. Funziona senza internet.",
+  "lang": "it",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#16191e",
+  "theme_color": "#16191e",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
