@@ -16,8 +16,32 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="stylesheet" href="app.css">
+<!-- SPLASH:INIZIO -->
+<link rel="apple-touch-startup-image" media="screen and (device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/640x1136.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/750x1334.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/1242x2208.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/1125x2436.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/828x1792.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/1242x2688.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 360px) and (device-height: 780px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/1080x2340.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/1170x2532.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/1284x2778.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/1179x2556.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/1290x2796.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/1206x2622.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/1320x2868.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 420px) and (device-height: 912px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/1260x2736.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/1536x2048.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/1620x2160.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/1640x2360.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/1668x2388.png">
+<link rel="apple-touch-startup-image" media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/2048x2732.png">
+<!-- SPLASH:FINE -->
 <script defer src="db.js"></script>
+<script defer src="disegno.js"></script>
 <script defer src="pdf.js"></script>
+<script defer src="tastierino.js"></script>
+<script defer src="lavagna.js"></script>
 <script defer src="app.js"></script>
 </head>
 <body>
@@ -60,6 +84,9 @@
     <symbol id="i-json" viewBox="0 0 24 24"><path d="M8 4c-2 0-3 1-3 3v2.5L3 12l2 2.5V17c0 2 1 3 3 3M16 4c2 0 3 1 3 3v2.5l2 2.5-2 2.5V17c0 2-1 3-3 3"/></symbol>
     <symbol id="i-sposta" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol>
     <symbol id="i-scudo" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6l8-3z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></symbol>
+    <symbol id="i-cancella" viewBox="0 0 24 24"><path d="M21 5.5H9.2L3 12l6.2 6.5H21a1 1 0 0 0 1-1v-11a1 1 0 0 0-1-1z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></symbol>
+    <symbol id="i-firma" viewBox="0 0 24 24"><path d="M3 16.5c2.2-3.6 3.8-4.6 4.6-3.1.9 1.6-.6 3.6.6 3.9 1.3.3 2.4-3.2 3.8-2.8 1.2.4.4 2.5 1.6 2.6 1 .1 1.6-1 2.4-1.6"/><path d="M3 20.5h18"/><path d="M16.5 4.5l3 3-6 6h-3v-3z"/></symbol>
+    <symbol id="i-penna" viewBox="0 0 24 24"><path d="M4 20l1.4-5.2L15.6 4.6a1.9 1.9 0 0 1 2.7 0l1.1 1.1a1.9 1.9 0 0 1 0 2.7L9.2 18.6z"/><path d="M13.8 6.4l3.8 3.8"/></symbol>
     <symbol id="i-categoria" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
   </defs>
 </svg>
