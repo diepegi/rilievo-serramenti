@@ -53,6 +53,19 @@ const DB = (() => {
     });
   }
 
+  // Cancellazione definitiva (usata solo da «Elimina per sempre» nel cestino): { negozio: [id, ...] }
+  function elimina(gruppi) {
+    return new Promise((ok, ko) => {
+      const nomi = Object.keys(gruppi).filter(k => gruppi[k] && gruppi[k].length);
+      if (!nomi.length) return ok();
+      const t = db.transaction(nomi, 'readwrite');
+      for (const n of nomi) { const s = t.objectStore(n); for (const id of gruppi[n]) s.delete(id); }
+      t.oncomplete = () => ok();
+      t.onerror = () => ko(t.error);
+      t.onabort = () => ko(t.error || new Error('Cancellazione annullata'));
+    });
+  }
+
   // Coda di salvataggio: le modifiche si accumulano per un attimo e poi si scrivono insieme.
   // Così si può scrivere velocemente senza rallentare nulla.
   const coda = new Map();
@@ -85,7 +98,7 @@ const DB = (() => {
   const inAttesa = () => coda.size > 0;
 
   return {
-    apri, tutti, uno, perIndice, scrivi, salva, svuota, inAttesa,
+    apri, tutti, uno, perIndice, scrivi, elimina, salva, svuota, inAttesa,
     suErrore: f => { onErrore = f; }, suOk: f => { onOk = f; },
   };
 })();

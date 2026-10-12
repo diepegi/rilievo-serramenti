@@ -1,6 +1,6 @@
 // Rilievi Serramenti: tiene l'app sul telefono per usarla senza internet.
 // La riga VERSIONE viene aggiornata da strumenti/versione.py a ogni modifica.
-const VERSIONE = 'rs-3885636c1f';
+const VERSIONE = 'rs-5cff24bda2';
 const FILE = ['./', 'index.html', 'app.css', 'db.js', 'disegno.js', 'pdf.js', 'tastierino.js', 'lavagna.js', 'app.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

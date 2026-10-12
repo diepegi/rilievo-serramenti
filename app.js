@@ -1,7 +1,7 @@
 'use strict';
 // Rilievi Serramenti — app per prendere le misure in cantiere. Tutto resta sul telefono.
 (() => {
-const VERSIONE = '2.0';
+const VERSIONE = '2.1';
 const app = document.getElementById('app');
 
 /* =========================================================
@@ -198,7 +198,7 @@ function conExtra(f, c, v) {
 // Conteggio dei pezzi (finestre e porte-finestre separate, così l'ufficio le legge subito)
 const RIEP = [
   { k: 'Finestra', uno: 'finestra', tanti: 'finestre', titolo: 'Finestre', icona: 'finestra', col: 'fin' },
-  { k: 'Porta-Finestra', uno: 'porta-finestra', tanti: 'porte-finestre', titolo: 'Porte-finestre', icona: 'finestra', col: 'fin' },
+  { k: 'Porta-Finestra', uno: 'porta-finestra', tanti: 'porte-finestre', titolo: 'Porte-finestre', icona: 'portafinestra', col: 'fin' },
   { k: 'Tapparella', uno: 'tapparella', tanti: 'tapparelle', titolo: 'Tapparelle', icona: 'tapparella', col: 'tap' },
   { k: 'Persiana', uno: 'persiana', tanti: 'persiane', titolo: 'Persiane', icona: 'persiana', col: 'per' },
   { k: 'Zanzariera', uno: 'zanzariera', tanti: 'zanzariere', titolo: 'Zanzariere', icona: 'zanzariera', col: 'zan' },
@@ -419,7 +419,7 @@ function sistemaGenitori() {
 }
 function cestinaConAnnulla(tipo, rec, extra, messaggio) {
   const g = cestina(tipo, rec, extra);
-  toast(messaggio || 'Spostato nel cestino', { l: 'Annulla', fn: () => { ripristina(g); ridisegna(); toast('Ripristinato'); } });
+  toast(messaggio || 'Eliminato', { l: 'Annulla', fn: () => { ripristina(g); ridisegna(); toast('Ripristinato'); } }, 6000);
   return g;
 }
 
@@ -515,6 +515,7 @@ const ROTTE = [
 ];
 function render(tornando, anima) {
   chiudiSheet(true);
+  swAperto = null;
   TASTIERINO.chiudi();
   $('.visore')?.remove();
   if (osservatore) { osservatore.disconnect(); osservatore = null; }
@@ -635,19 +636,34 @@ function avviso(titolo, testo) { sheet({ titolo, sotto: testo, voci: [], annulla
 /* =========================================================
    HOME: rilievi e clienti
    ========================================================= */
+function saluto() { const h = new Date().getHours(); return h < 13 ? 'Buongiorno' : h < 18 ? 'Buon pomeriggio' : 'Buonasera'; }
 function pHome() {
-  const nR = attivi(S.rilievi).length, nC = attivi(S.clienti).length;
-  const tab = UI.tab;
+  const ril = attivi(S.rilievi), nR = ril.length, nC = attivi(S.clienti).length;
+  const inCorso = ril.filter(r => r.stato !== 'Completato').length, fatti = nR - inCorso;
+  let pezzi = 0;
+  for (const a of S.articoli.values()) { if (a.deleted_at) continue; const r = S.rilievi.get(a.rilievo_id); if (r && !r.deleted_at) pezzi += a.quantita || 1; }
+  const tab = UI.tab, nome = (S.imp.tecnico || '').trim().split(/\s+/)[0];
+  const n = tab === 'rilievi' ? nR : nC;
   app.innerHTML = barra({ titolo: 'Rilievi Serramenti', destra: bIcona('impostazioni', 'vai', 'Impostazioni', 'data-h="impostazioni"') })
     + `<main class="pag con-fondo largo">
+      <section class="hero">
+        <div class="hero-saluto">${saluto()}${nome ? ', ' + esc(nome) : ''}</div>
+        <h1>${tab === 'rilievi' ? 'I tuoi rilievi' : 'I tuoi clienti'}</h1>
+        <div class="stat">
+          <button class="stat-v${tab === 'rilievi' && UI.filtro === 'Bozza' ? ' on' : ''}" data-act="filtro-rapido" data-f="Bozza"><b>${inCorso}</b><span>in corso</span></button>
+          <button class="stat-v${tab === 'rilievi' && UI.filtro === 'Completato' ? ' on' : ''}" data-act="filtro-rapido" data-f="Completato"><b>${fatti}</b><span>${fatti === 1 ? 'completato' : 'completati'}</span></button>
+          <div class="stat-v"><b>${pezzi}</b><span>${pezzi === 1 ? 'pezzo rilevato' : 'pezzi rilevati'}</span></div>
+        </div>
+        <div class="seg" role="tablist">
+          <button class="${tab === 'rilievi' ? 'on' : ''}" data-act="tab" data-t="rilievi" role="tab" aria-selected="${tab === 'rilievi'}">Rilievi<span>${nR}</span></button>
+          <button class="${tab === 'clienti' ? 'on' : ''}" data-act="tab" data-t="clienti" role="tab" aria-selected="${tab === 'clienti'}">Clienti<span>${nC}</span></button>
+        </div>
+        ${n ? `<div class="cerca">${ic('cerca')}<input type="search" id="cerca" placeholder="${tab === 'rilievi' ? 'Cerca titolo, cliente, indirizzo…' : 'Cerca cliente…'}" value="${esc(UI.cerca)}" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Cerca"></div>` : ''}
+      </section>
       ${avvisiHome()}
-      <div class="seg" role="tablist">
-        <button class="${tab === 'rilievi' ? 'on' : ''}" data-act="tab" data-t="rilievi" role="tab" aria-selected="${tab === 'rilievi'}">Rilievi<span>${nR}</span></button>
-        <button class="${tab === 'clienti' ? 'on' : ''}" data-act="tab" data-t="clienti" role="tab" aria-selected="${tab === 'clienti'}">Clienti<span>${nC}</span></button>
-      </div>
-      ${(tab === 'rilievi' ? nR : nC) ? `<div class="cerca">${ic('cerca')}<input type="search" id="cerca" placeholder="${tab === 'rilievi' ? 'Cerca titolo, cliente, indirizzo…' : 'Cerca cliente…'}" value="${esc(UI.cerca)}" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Cerca"></div>` : ''}
       ${tab === 'rilievi' && nR ? `<div class="filtri">${[['tutti', 'Tutti'], ['Bozza', 'In bozza'], ['Completato', 'Completati']].map(([k, l]) => `<button class="filtro ${UI.filtro === k ? 'on' : ''}" data-act="filtro" data-f="${k}">${l}</button>`).join('')}</div>` : ''}
       <div id="lista">${tab === 'rilievi' ? listaRilievi() : listaClienti()}</div>
+      ${n ? `<p class="suggerimento-scorri">${ic('indietro')}Trascina una scheda verso sinistra per eliminarla</p>` : ''}
     </main>`
     + fondo(tab === 'clienti'
       ? `<button class="btn grande" data-act="vai" data-h="c/nuovo">${ic('piu')} Cliente</button><button class="btn pri grande" data-act="vai" data-h="nuovo">${ic('piu')} Rilievo</button>`
@@ -699,6 +715,10 @@ function gruppoData(iso) {
   if (d.getFullYear() === o.getFullYear() && d.getMonth() === o.getMonth()) return 'Questo mese';
   return `${MESI[d.getMonth()]} ${d.getFullYear()}`;
 }
+// Schede che si possono trascinare a sinistra per far comparire «Elimina» (come su iPhone)
+const azElimina = (tipo, id) => `<button class="scorri-b elimina" data-act="elimina" data-tipo="${tipo}" data-id="${id}">${ic('cestino')}<span>Elimina</span></button>`;
+const scorri = (tipo, id, contenuto, { cls = '', attr = '' } = {}) => `<div class="scorri" data-sw="${tipo}"><div class="scorri-az">${azElimina(tipo, id)}</div><div class="scorri-c ${cls}" ${attr}>${contenuto}</div></div>`;
+
 function listaRilievi() {
   const tutti = attivi(S.rilievi);
   if (!tutti.length) return `<div class="vuoto benvenuto">${DISEGNO.svg(DISEGNO.disegna('Finestra/Porta-Finestra', { composizione_ante: '2 Ante', wasistas: true, larghezza_mm: 1200, altezza_mm: 1400 }, { w: 150, h: 150, quote: true }), 'illus')}
@@ -714,22 +734,24 @@ function listaRilievi() {
   for (const r of l) {
     if (raggruppa) {
       const g = gruppoData(r.updated_at);
-      if (g !== gruppo) { if (aperta) h += '</div>'; h += `<div class="sez">${g}</div><div class="lista">`; gruppo = g; aperta = true; }
-    } else if (!aperta) { h += '<div class="lista">'; aperta = true; }
-    h += rigaRilievo(r, info.get(r.id));
+      if (g !== gruppo) { if (aperta) h += '</div>'; h += `<div class="sez">${g}</div><div class="rcards">`; gruppo = g; aperta = true; }
+    } else if (!aperta) { h += '<div class="rcards">'; aperta = true; }
+    h += cardRilievo(r, info.get(r.id));
   }
   return h + (aperta ? '</div>' : '');
 }
-function rigaRilievo(r, inf) {
+function cardRilievo(r, inf) {
   const c = S.clienti.get(r.cliente_id);
-  const ns = r.stanze.filter(s => !s.deleted_at).length;
-  const tipi = inf ? contaTipi(inf.lista).map(x => `<span class="mini-tipo" style="--cc:var(--c-${x.col})">${ic(x.icona)}${x.n}</span>`).join('') : '';
-  return `<a class="riga riga-ril" href="#/r/${r.id}"><div class="riga-c">
-    <div class="riga-t">${esc(titoloRilievo(r))}</div>
-    <div class="riga-s">${esc(nomeCliente(c))}${r.indirizzo_cantiere && r.titolo ? ' · ' + esc(r.indirizzo_cantiere) : ''}</div>
-    <div class="riga-m"><span>${fmtData(r.data_rilievo)} · ${plur(ns, 'stanza', 'stanze')}</span>${tipi ? `<span class="tipi">${tipi}</span>` : ''}</div>
-    ${inf && inf.mancanti ? `<div class="riga-avv">${ic('avviso')}${plur(inf.mancanti, 'articolo', 'articoli')} senza misure</div>` : ''}
-  </div><span class="pill ${r.stato}">${r.stato}</span></a>`;
+  const tot = inf ? inf.lista.length : 0, mis = tot - (inf ? inf.mancanti : 0);
+  const perc = tot ? Math.round(mis / tot * 100) : 0;
+  const tipi = inf ? contaTipi(inf.lista).map(x => `<span class="mini-tipo" style="--cc:var(--c-${x.col});--ct:var(--t-${x.col})">${ic(x.icona)}${x.n}</span>`).join('') : '';
+  return scorri('rilievo', r.id, `<a class="rcard" href="#/r/${r.id}">
+    <div class="rcard-top"><b>${esc(titoloRilievo(r))}</b><span class="pill ${r.stato}">${r.stato}</span></div>
+    <div class="rcard-r">${ic('utente')}<span>${esc(nomeCliente(c))}</span></div>
+    ${r.indirizzo_cantiere && r.titolo ? `<div class="rcard-r">${ic('pin')}<span>${esc(r.indirizzo_cantiere)}</span></div>` : ''}
+    ${tipi ? `<div class="rcard-tipi">${tipi}</div>` : ''}
+    <div class="rcard-fondo"><span class="prog${perc === 100 ? ' pieno' : ''}"><i style="width:${perc}%"></i></span><span>${tot ? `${mis} di ${tot} con misure` : 'Ancora vuoto'}</span><span class="rcard-data">${fmtData(r.data_rilievo)}</span></div>
+  </a>`);
 }
 function listaClienti(scegli) {
   const tutti = attivi(S.clienti);
@@ -741,11 +763,10 @@ function listaClienti(scegli) {
     .sort(scegli ? (a, b) => (b.updated_at || '').localeCompare(a.updated_at || '') : (a, b) => nomeCliente(a).localeCompare(nomeCliente(b), 'it'));
   if (!l.length) return `<div class="vuoto"><p>Nessun cliente trovato.</p></div>`;
   const iniziali = c => nomeCliente(c).split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase();
-  return `<div class="lista">${l.map(c => scegli
-    ? `<button class="riga" data-act="scegli-cliente" data-id="${c.id}"><span class="avatar">${esc(iniziali(c))}</span><div class="riga-c"><div class="riga-t">${esc(nomeCliente(c))}</div><div class="riga-s">${esc([c.indirizzo, c.telefono].filter(Boolean).join(' · ') || 'Nessun recapito')}</div></div>${ic('avanti')}</button>`
-    : `<div class="riga riga-cl"><a class="riga-link" href="#/c/${c.id}"><span class="avatar">${esc(iniziali(c))}</span><div class="riga-c"><div class="riga-t">${esc(nomeCliente(c))}</div>
+  if (scegli) return `<div class="lista">${l.map(c => `<button class="riga" data-act="scegli-cliente" data-id="${c.id}"><span class="avatar">${esc(iniziali(c))}</span><div class="riga-c"><div class="riga-t">${esc(nomeCliente(c))}</div><div class="riga-s">${esc([c.indirizzo, c.telefono].filter(Boolean).join(' · ') || 'Nessun recapito')}</div></div>${ic('avanti')}</button>`).join('')}</div>`;
+  return `<div class="rcards">${l.map(c => scorri('cliente', c.id, `<div class="ccard"><a class="riga-link" href="#/c/${c.id}"><span class="avatar">${esc(iniziali(c))}</span><div class="riga-c"><div class="riga-t">${esc(nomeCliente(c))}</div>
         <div class="riga-s">${esc([c.indirizzo, c.telefono].filter(Boolean).join(' · ') || 'Nessun recapito')}</div><div class="riga-m">${plur(nRil.get(c.id) || 0, 'rilievo', 'rilievi')}</div></div></a>
-        ${c.telefono ? `<a class="b-tondo" href="${linkTel(c.telefono)}" aria-label="Chiama ${esc(nomeCliente(c))}">${ic('telefono')}</a>` : ''}</div>`).join('')}</div>`;
+        ${c.telefono ? `<a class="b-tondo" href="${linkTel(c.telefono)}" aria-label="Chiama ${esc(nomeCliente(c))}">${ic('telefono')}</a>` : ''}</div>`)).join('')}</div>`;
 }
 
 /* =========================================================
@@ -786,7 +807,8 @@ function pCliente(cid) {
     + `<main class="pag con-fondo">
       ${righe.length ? `<div class="lista info-cliente">${righe.join('')}</div>` : `<button class="btn blocco" data-act="vai" data-h="c/${cid}/modifica">${ic('matita')} Aggiungi indirizzo e recapiti</button>`}
       <div class="sez">Rilievi (${ril.length})</div>
-      ${ril.length ? `<div class="lista">${ril.map(r => rigaRilievo(r, info.get(r.id))).join('')}</div>` : `<p class="nota">Nessun rilievo per questo cliente.</p>`}
+      ${ril.length ? `<div class="rcards">${ril.map(r => cardRilievo(r, info.get(r.id))).join('')}</div>` : `<p class="nota">Nessun rilievo per questo cliente.</p>`}
+      <button class="btn-elimina" data-act="elimina" data-tipo="cliente" data-id="${cid}">${ic('cestino')} Elimina questo cliente</button>
     </main>`
     + fondo(`<button class="btn pri grande" data-act="vai" data-h="nuovo/${cid}">${ic('piu')} Nuovo rilievo per ${esc(nomeCliente(c).split(' ')[0])}</button>`);
 }
@@ -796,7 +818,7 @@ function pClienteModifica(cid) {
     + `<main class="pag"><div class="modulo">${campiCliente(c, true)}</div>
       <p class="nota">${ic('check', 'piccola')} Le modifiche si salvano da sole.</p>
       <div class="spazio"></div>
-      <button class="btn peric blocco" data-act="cestina-cliente" data-id="${cid}">${ic('cestino')} Sposta il cliente nel cestino</button>
+      <button class="btn peric blocco" data-act="cestina-cliente" data-id="${cid}">${ic('cestino')} Elimina questo cliente</button>
     </main>`;
 }
 
@@ -847,7 +869,7 @@ function pModificaRilievo(rid) {
       <div class="sez">Stato</div>
       <div class="chips">${['Bozza', 'Completato'].map(s => `<button class="chip ${r.stato === s ? 'on' : ''}" data-act="stato" data-id="${rid}" data-v="${s}" aria-pressed="${r.stato === s}">${s}</button>`).join('')}</div>
       <div class="spazio"></div><div class="spazio"></div>
-      <button class="btn peric blocco" data-act="cestina-rilievo" data-id="${rid}">${ic('cestino')} Sposta il rilievo nel cestino</button>
+      <button class="btn peric blocco" data-act="cestina-rilievo" data-id="${rid}">${ic('cestino')} Elimina questo rilievo</button>
     </main>`;
 }
 
@@ -859,20 +881,22 @@ function pRilievo(rid) {
   const c = S.clienti.get(r.cliente_id);
   const str = struttura(r), pos = posizioni(str);
   const riep = riepilogo(r);
+  const tot = str.reduce((n, s) => n + s.articoli.length, 0);
   const mancanti = str.reduce((n, s) => n + s.articoli.filter(a => descrivi(a).mancano).length, 0);
+  const perc = tot ? Math.round((tot - mancanti) / tot * 100) : 0;
   let h = barra({ titolo: titoloRilievo(r), sotto: nomeCliente(c), indietro: { h: '', l: 'Rilievi' }, destra: bIcona('menu', 'menu-rilievo', 'Menu del rilievo', `data-id="${rid}"`) });
   h += `<main class="pag con-fondo largo">
-  ${r.stato === 'Completato' ? `<div class="completato">${ic('check')}<span>Rilievo completato</span><button class="link-btn" data-act="stato" data-id="${rid}" data-v="Bozza">Riapri</button></div>` : ''}
-  <section class="testata">
-    <div class="testata-top"><a href="#/c/${c ? c.id : ''}">${esc(nomeCliente(c))}${ic('avanti', 'piccola')}</a>
+  <section class="whero">
+    <div class="whero-top"><a class="whero-cli" href="#/c/${c ? c.id : ''}">${ic('utente')}<span>${esc(nomeCliente(c))}</span>${ic('avanti', 'piccola')}</a>
       <button class="pill ${r.stato}" data-act="menu-stato" data-id="${rid}">${r.stato}</button></div>
-    ${r.indirizzo_cantiere ? `<div class="testata-r">${ic('pin')}<a href="${linkMappa(r.indirizzo_cantiere)}" target="_blank" rel="noopener">${esc(r.indirizzo_cantiere)}</a></div>` : ''}
-    <div class="testata-r">${ic('calendario')}<span>${fmtData(r.data_rilievo)}</span></div>
-    ${c && c.telefono ? `<div class="testata-r">${ic('telefono')}<a href="${linkTel(c.telefono)}">${esc(c.telefono)}</a></div>` : ''}
-    ${riep.length ? `<div class="conteggi">${riep.map(x => `<span class="conteggio" style="--cc:var(--c-${x.col})">${ic(x.icona)}${x.n} ${esc(x.nome)}</span>`).join('')}</div>` : ''}
-    ${mancanti ? `<button class="mancanti" data-act="vai-mancante">${ic('avviso')}<span>${mancanti === 1 ? '1 articolo senza misure' : mancanti + ' articoli senza misure'}</span><b>Vai</b></button>` : ''}
+    ${r.indirizzo_cantiere ? `<a class="whero-r" href="${linkMappa(r.indirizzo_cantiere)}" target="_blank" rel="noopener">${ic('pin')}<span>${esc(r.indirizzo_cantiere)}</span></a>` : ''}
+    <div class="whero-r">${ic('calendario')}<span>${fmtData(r.data_rilievo)}</span>${c && c.telefono ? `<a class="whero-tel" href="${linkTel(c.telefono)}">${ic('telefono')}Chiama</a>` : ''}</div>
+    ${tot ? `<div class="whero-prog"><span class="prog${perc === 100 ? ' pieno' : ''}"><i style="width:${perc}%"></i></span><span>${tot - mancanti} di ${tot} con misure</span></div>` : ''}
+    ${riep.length ? `<div class="conteggi">${riep.map(x => `<span class="conteggio">${ic(x.icona)}${x.n} ${esc(x.nome)}</span>`).join('')}</div>` : ''}
     ${r.note_generali ? `<div class="note-gen">${esc(r.note_generali)}</div>` : ''}
-  </section>`;
+  </section>
+  ${r.stato === 'Completato' ? `<div class="completato">${ic('check')}<span>Rilievo completato</span><button class="link-btn" data-act="stato" data-id="${rid}" data-v="Bozza">Riapri</button></div>` : ''}
+  ${mancanti ? `<button class="mancanti" data-act="vai-mancante">${ic('avviso')}<span>${mancanti === 1 ? '1 articolo senza misure' : mancanti + ' articoli senza misure'}</span><b>Vai</b></button>` : ''}`;
 
   if (str.length > 1) {
     h += `<nav class="indice" id="indice" aria-label="Stanze">${str.map(({ stanza: s, articoli }) => `<button class="indice-v" data-act="vai-stanza" data-sid="${s.id}">${esc(s.nome)}<span>${articoli.length}</span></button>`).join('')}</nav>`;
@@ -885,13 +909,15 @@ function pRilievo(rid) {
   for (const { stanza: s, articoli } of str) {
     const chiusa = UI.chiuse.has(s.id);
     h += `<section class="stanza${chiusa ? ' chiusa' : ''}" id="s-${s.id}" style="--n:${articoli.length}">
-      <div class="stanza-t"><button class="stanza-nome" data-act="apri-chiudi" data-sid="${s.id}" aria-expanded="${!chiusa}">${ic('giu', 'freccia')}<h2>${esc(s.nome)}</h2><small>${articoli.length || ''}</small></button>${bIcona('menu', 'menu-stanza', 'Menu stanza ' + s.nome, `data-sid="${s.id}"`)}</div>
+      <div class="stanza-t"><button class="stanza-nome" data-act="apri-chiudi" data-sid="${s.id}" aria-expanded="${!chiusa}"><span class="stanza-ic">${ic('casa')}</span><h2>${esc(s.nome)}</h2>${articoli.length ? `<span class="badge">${articoli.length}</span>` : ''}${ic('giu', 'freccia')}</button>${bIcona('menu', 'menu-stanza', 'Menu stanza ' + s.nome, `data-sid="${s.id}"`)}</div>
       ${chiusa ? `<button class="stanza-rias" data-act="apri-chiudi" data-sid="${s.id}">${articoli.length ? esc(contaTipi(articoli).map(x => `${x.n} ${x.nome}`).join(' · ')) : 'Nessun articolo'} · tocca per aprire</button>`
         : `${articoli.length ? `<div class="arts">${articoli.map(a => schedaArticolo(a, pos.get(a.id))).join('')}</div>` : ''}
-      <div class="aggiungi">${CATEGORIE.map(k => `<button class="agg" style="--cc:var(--c-${k.col})" data-act="nuovo-art" data-sid="${s.id}" data-cat="${esc(k.id)}" aria-label="Aggiungi ${esc(k.breve)} in ${esc(s.nome)}">${ic(k.icona)}<span>${esc(k.breve)}</span></button>`).join('')}</div>`}
+      <div class="aggiungi">${CATEGORIE.map(k => `<button class="agg" style="--cc:var(--c-${k.col});--ct:var(--t-${k.col})" data-act="nuovo-art" data-sid="${s.id}" data-cat="${esc(k.id)}" aria-label="Aggiungi ${esc(k.breve)} in ${esc(s.nome)}">${ic(k.icona)}<span>${esc(k.breve)}</span></button>`).join('')}</div>`}
     </section>`;
   }
   if (str.length) h += sezFirma(r);
+  h += `<button class="btn-elimina" data-act="cestina-rilievo" data-id="${rid}">${ic('cestino')} Elimina questo rilievo</button>`;
+  if (tot) h += `<p class="suggerimento-scorri">${ic('indietro')}Trascina un articolo verso sinistra per eliminarlo</p>`;
   h += `</main>`;
   h += fondo(`<button class="btn grande" data-act="aggiungi-stanza">${ic('piu')} Stanza</button><button class="btn scuro grande" data-act="esporta" data-id="${rid}">${ic('condividi')} Esporta</button>`);
   app.innerHTML = h;
@@ -907,7 +933,7 @@ function sezFirma(r) {
 function schedaArticolo(a, n) {
   const d = descrivi(a);
   const misure = d.misure ? (d.mancano ? `<span class="art-mis manca">Misure da inserire</span>` : `<span class="art-mis">${esc(d.misure)}<small>mm</small></span>`) : '';
-  return `<div class="art" id="a-${a.id}" style="--cc:var(--c-${d.cat.col})">
+  return scorri('articolo', a.id, `
     <a class="art-main" href="#/r/${a.rilievo_id}/a/${a.id}">
       <span class="art-dis">${svgMini(a)}<span class="art-pos">${n}</span></span>
       <span class="art-txt">
@@ -917,8 +943,8 @@ function schedaArticolo(a, n) {
         ${d.note ? `<span class="art-note">${esc(d.note)}</span>` : ''}
       </span>
     </a>
-    <button class="art-dup" data-act="duplica" data-id="${a.id}" aria-label="Duplica ${esc(d.titolo)} posizione ${n}">${ic('duplica')}<span>Duplica</span></button>
-  </div>`;
+    <button class="art-dup" data-act="duplica" data-id="${a.id}" aria-label="Duplica ${esc(d.titolo)} posizione ${n}">${ic('duplica')}<span>Duplica</span></button>`,
+    { cls: 'art', attr: `id="a-${a.id}" style="--cc:var(--c-${d.cat.col});--ct:var(--t-${d.cat.col})"` });
 }
 // Indice delle stanze: evidenzia quella che si sta guardando
 let osservatore = null;
@@ -958,17 +984,17 @@ function pArticolo(rid, aid) {
     banner = `<div class="prec">${ic('duplica')}<span>Scelte copiate ${esc(dove)}</span><button class="link-btn" data-act="svuota-scelte">Svuota</button></div>`;
   }
   app.innerHTML = barra({ titolo: `Pos. ${i + 1} · ${descrivi(a).titolo}`, sotto: `${st ? st.nome : ''} · ${titoloRilievo(r)}`, indietro: { h: `r/${rid}`, l: 'Rilievo' }, destra: bIcona('menu', 'menu-articolo', 'Menu articolo') })
-    + `<main class="pag con-fondo" id="editor" data-aid="${aid}" style="--cc:var(--c-${cat.col})">
+    + `<main class="pag con-fondo" id="editor" data-aid="${aid}" style="--cc:var(--c-${cat.col});--ct:var(--t-${cat.col})">
       <div class="ed-nav">
         <button class="b-nav" data-act="art-vai" data-id="${prec ? prec.id : ''}" ${prec ? '' : 'disabled'} aria-label="Articolo precedente">${ic('indietro')}</button>
-        <button class="ed-nav-c" data-act="sposta-articolo" aria-label="Cambia stanza"><small>${ic(cat.icona, 'piccola')} ${esc(cat.lungo)} · ${i + 1} di ${lista.length}</small><b>${esc(st ? st.nome : '—')}</b></button>
+        <button class="ed-nav-c" data-act="sposta-articolo" aria-label="Cambia stanza"><span class="ed-ic">${ic(a.configurazione.tipologia === 'Porta-Finestra' ? 'portafinestra' : cat.icona)}</span><span><small>${esc(descrivi(a).titolo)} · ${i + 1} di ${lista.length}</small><b>${esc(st ? st.nome : '—')}</b></span></button>
         <button class="b-nav" data-act="art-vai" data-id="${succ ? succ.id : ''}" ${succ ? '' : 'disabled'} aria-label="Articolo successivo">${ic('avanti')}</button>
       </div>
       ${banner}
       <div id="campi">${campiArticolo(a)}</div>
       <section class="campo"><div class="etichetta">Foto e schizzi <em>${a.foto.length ? '' : 'facoltativi'}</em></div><div class="foto-griglia" id="foto">${grigliaFoto(a)}</div></section>
     </main>`
-    + fondo(`<button class="btn grande" data-act="duplica" data-id="${aid}">${ic('duplica')} Duplica</button><button class="btn pri grande" data-act="fatto">${ic('check')} Fatto</button>`);
+    + fondo(`<button class="btn grande solo-ic" data-act="elimina" data-tipo="articolo" data-id="${aid}" aria-label="Elimina questo articolo">${ic('cestino')}</button><button class="btn grande" data-act="duplica" data-id="${aid}">${ic('duplica')} Duplica</button><button class="btn pri grande" data-act="fatto">${ic('check')} Fatto</button>`);
   if (!S.miniCaricate.has(rid)) caricaMiniature(rid).then(() => { if (rotta === `r/${rid}/a/${aid}`) aggiornaFoto(a); });
 }
 const artCorrente = () => S.articoli.get($('#editor')?.dataset.aid);
@@ -1191,7 +1217,7 @@ async function vediFoto(id) {
   const el = document.createElement('div');
   el.className = 'visore';
   el.innerHTML = `<div class="visore-barra"><button data-v="chiudi">${ic('chiudi')} Chiudi</button><span></span>
-    <button data-v="disegna">${ic('penna')} Disegna sopra</button><button class="peric" data-v="cestina" aria-label="Sposta nel cestino">${ic('cestino')}</button></div>
+    <button data-v="disegna">${ic('penna')} Disegna sopra</button><button class="peric" data-v="cestina">${ic('cestino')} Elimina</button></div>
     <div class="visore-img"><img src="${url}" alt="Foto"></div>`;
   const chiudi = () => { el.remove(); URL.revokeObjectURL(url); };
   el.addEventListener('click', async e => {
@@ -1201,7 +1227,7 @@ async function vediFoto(id) {
     if (b.dataset.v === 'cestina') {
       chiudi();
       if (!m) return;
-      cestinaConAnnulla('foto', m, null, 'Foto spostata nel cestino');
+      cestinaConAnnulla('foto', m, null, 'Foto eliminata');
       if (a) aggiornaFoto(a);
     }
     if (b.dataset.v === 'disegna' && a) {
@@ -1341,25 +1367,56 @@ function vociCestino() {
     else if (livello < x.livello) { gruppi.set(g, { g, livello, quando, html, altri: x.altri + 1 }); }
     else x.altri++;
   };
-  for (const c of S.clienti.values()) if (c.deleted_at) aggiungi(c.cestino_gruppo, 0, c.deleted_at, `${ic('utente')}<div class="riga-c"><div class="riga-t">${esc(nomeCliente(c))}</div><div class="riga-s">Cliente`);
+  for (const c of S.clienti.values()) if (c.deleted_at) aggiungi(c.cestino_gruppo, 0, c.deleted_at, `<span class="avatar">${ic('utente')}</span><div class="riga-c"><div class="riga-t">${esc(nomeCliente(c))}</div><div class="riga-s">Cliente`);
   for (const r of S.rilievi.values()) {
     const c = S.clienti.get(r.cliente_id);
-    if (r.deleted_at) aggiungi(r.cestino_gruppo, 1, r.deleted_at, `${ic('finestra')}<div class="riga-c"><div class="riga-t">${esc(titoloRilievo(r))}</div><div class="riga-s">Rilievo · ${esc(nomeCliente(c))}`);
-    for (const s of r.stanze) if (s.deleted_at) aggiungi(s.cestino_gruppo, 2, s.deleted_at, `${ic('casa')}<div class="riga-c"><div class="riga-t">${esc(s.nome)}</div><div class="riga-s">Stanza · ${esc(titoloRilievo(r))}`);
+    if (r.deleted_at) aggiungi(r.cestino_gruppo, 1, r.deleted_at, `<span class="ic-tondo">${ic('finestra')}</span><div class="riga-c"><div class="riga-t">${esc(titoloRilievo(r))}</div><div class="riga-s">Rilievo · ${esc(nomeCliente(c))}`);
+    for (const s of r.stanze) if (s.deleted_at) aggiungi(s.cestino_gruppo, 2, s.deleted_at, `<span class="ic-tondo">${ic('casa')}</span><div class="riga-c"><div class="riga-t">${esc(s.nome)}</div><div class="riga-s">Stanza · ${esc(titoloRilievo(r))}`);
   }
   for (const a of S.articoli.values()) if (a.deleted_at) {
     const d = descrivi(a), r = S.rilievi.get(a.rilievo_id);
-    aggiungi(a.cestino_gruppo, 3, a.deleted_at, `<span class="cest-dis" style="--cc:var(--c-${d.cat.col})">${svgMini(a)}</span><div class="riga-c"><div class="riga-t">${esc(d.titolo)}${d.misure ? ' ' + esc(d.misure) : ''}</div><div class="riga-s">${esc(a.stanza_rif || '')} · ${esc(r ? titoloRilievo(r) : '')}`);
+    aggiungi(a.cestino_gruppo, 3, a.deleted_at, `<span class="cest-dis" style="--cc:var(--c-${d.cat.col});--ct:var(--t-${d.cat.col})">${svgMini(a)}</span><div class="riga-c"><div class="riga-t">${esc(d.titolo)}${d.misure ? ' ' + esc(d.misure) : ''}</div><div class="riga-s">${esc(a.stanza_rif || '')} · ${esc(r ? titoloRilievo(r) : '')}`);
   }
   for (const m of S.mini.values()) if (m.deleted_at && m.tipo !== 'firma') {
     const a = S.articoli.get(m.articolo_id);
     aggiungi(m.cestino_gruppo, 4, m.deleted_at, `<img class="mini-th" src="${urlMiniatura(m)}" alt=""><div class="riga-c"><div class="riga-t">${m.tipo === 'schizzo' ? 'Schizzo' : 'Foto'}</div><div class="riga-s">${a ? esc(descrivi(a).titolo + ' · ' + (a.stanza_rif || '')) : ''}`);
   }
   const l = [...gruppi.values()].sort((a, b) => b.quando.localeCompare(a.quando));
-  if (!l.length) return `<div class="vuoto">${ic('cestino')}<b>Il cestino è vuoto</b><p>Quando sposti qualcosa nel cestino lo ritrovi qui e puoi rimetterlo a posto.</p></div>`;
-  return `<p class="nota" style="margin-bottom:12px">Qui niente viene cancellato davvero: puoi sempre ripristinare.</p>
-    <div class="lista">${l.map(x => `<div class="riga">${x.html}${x.altri ? ` (con ${plur(x.altri, 'altro elemento', 'altri elementi')})` : ''} · ${fmtQuando(x.quando)}</div></div>
-    <button class="btn piccolo" data-act="ripristina" data-g="${x.g}">${ic('ripristina', 'piccola')} Ripristina</button></div>`).join('')}</div>`;
+  if (!l.length) return `<div class="vuoto">${ic('cestino')}<b>Il cestino è vuoto</b><p>Quello che elimini finisce qui: puoi rimetterlo a posto quando vuoi.</p></div>`;
+  return `<p class="nota" style="margin-bottom:10px">Qui trovi quello che hai eliminato. Puoi ripristinarlo, oppure eliminarlo per sempre.</p>
+    <button class="btn blocco peric" data-act="svuota-cestino" style="margin-bottom:12px">${ic('cestino')} Svuota il cestino</button>
+    <div class="lista">${l.map(x => `<div class="riga">${x.html}${x.altri ? ` (con ${plur(x.altri, 'altro elemento', 'altri elementi')})` : ''} · eliminato il ${fmtQuando(x.quando)}</div></div>
+    <div class="cest-az"><button class="btn piccolo" data-act="ripristina" data-g="${x.g}">${ic('ripristina', 'piccola')} Ripristina</button><button class="btn piccolo rosso" data-act="elimina-sempre" data-g="${x.g}">Elimina</button></div></div>`).join('')}</div>`;
+}
+function gruppiCestino() {
+  const g = new Set();
+  for (const m of [S.clienti, S.rilievi, S.articoli]) for (const x of m.values()) if (x.deleted_at) g.add(x.cestino_gruppo);
+  for (const r of S.rilievi.values()) for (const s of r.stanze) if (s.deleted_at) g.add(s.cestino_gruppo);
+  for (const m of S.mini.values()) if (m.deleted_at && m.tipo !== 'firma') g.add(m.cestino_gruppo);
+  return g;
+}
+// Eliminazione definitiva (solo dal cestino, con conferma): cancella anche ciò che dipende da quello che si elimina
+async function eliminaPerSempre(gruppi) {
+  const G = new Set(gruppi);
+  await DB.svuota();
+  for (const m of await DB.tutti('miniature')) if (!S.mini.has(m.id)) S.mini.set(m.id, m);
+  const cli = new Set(), ril = new Set(), stz = new Set(), art = new Set(), foto = new Set(), daSalvare = new Set();
+  for (const c of S.clienti.values()) if (c.deleted_at && G.has(c.cestino_gruppo)) cli.add(c.id);
+  for (const r of S.rilievi.values()) if (r.deleted_at && (G.has(r.cestino_gruppo) || cli.has(r.cliente_id))) ril.add(r.id);
+  for (const r of S.rilievi.values()) {
+    if (ril.has(r.id)) continue;
+    for (const s of r.stanze) if (s.deleted_at && G.has(s.cestino_gruppo)) { stz.add(s.id); daSalvare.add(r); }
+  }
+  for (const a of S.articoli.values()) if (ril.has(a.rilievo_id) || (a.deleted_at && (G.has(a.cestino_gruppo) || stz.has(a.stanza_id)))) art.add(a.id);
+  for (const m of S.mini.values()) if (ril.has(m.rilievo_id) || art.has(m.articolo_id) || (m.deleted_at && G.has(m.cestino_gruppo))) foto.add(m.id);
+  await DB.elimina({ clienti: [...cli], rilievi: [...ril], articoli: [...art], foto: [...foto], miniature: [...foto] });
+  for (const id of cli) S.clienti.delete(id);
+  for (const id of ril) S.rilievi.delete(id);
+  for (const id of art) S.articoli.delete(id);
+  for (const id of foto) { S.mini.delete(id); if (urlMini.has(id)) { URL.revokeObjectURL(urlMini.get(id)); urlMini.delete(id); } }
+  for (const r of daSalvare) { r.stanze = r.stanze.filter(s => !stz.has(s.id)); modificato(r, 'rilievi'); }
+  await DB.svuota();
+  return cli.size + ril.size + stz.size + art.size + foto.size;
 }
 
 /* =========================================================
@@ -1671,8 +1728,8 @@ const AZ = {
   'cestina-cliente': el => {
     const c = S.clienti.get(el.dataset.id);
     const n = attivi(S.rilievi).filter(r => r.cliente_id === c.id).length;
-    conferma({ titolo: `Spostare ${nomeCliente(c)} nel cestino?`, testo: n ? `Insieme al cliente vanno nel cestino anche i suoi ${plur(n, 'rilievo', 'rilievi')}. Potrai ripristinare tutto dal cestino.` : 'Potrai ripristinarlo dal cestino.', si: 'Sposta nel cestino', peric: true,
-      fn: () => { torna(''); cestinaConAnnulla('cliente', c, null, 'Cliente spostato nel cestino'); } });
+    conferma({ titolo: `Eliminare ${nomeCliente(c)}?`, testo: n ? `Vengono eliminati anche i suoi ${plur(n, 'rilievo', 'rilievi')}. Finisce tutto nel cestino: puoi recuperarlo finché non lo elimini per sempre.` : 'Finisce nel cestino: puoi recuperarlo finché non lo elimini per sempre.', si: 'Elimina', peric: true,
+      fn: () => { torna(''); cestinaConAnnulla('cliente', c, null, 'Cliente eliminato'); } });
   },
 
   // Nuovo rilievo
@@ -1695,7 +1752,7 @@ const AZ = {
       { l: r.stato === 'Bozza' ? 'Segna come completato' : 'Riporta in bozza', ic: 'check', fn: () => cambiaStato(r, r.stato === 'Bozza' ? 'Completato' : 'Bozza') },
       { l: 'Apri o chiudi tutte le stanze', ic: 'giu', fn: () => apriChiudiTutte(r) },
       { l: 'Duplica tutto il rilievo', nota: 'Stesso cliente, stesse stanze e articoli', ic: 'duplica', fn: () => duplicaRilievo(r) },
-      { l: 'Sposta nel cestino', ic: 'cestino', cls: 'peric', fn: () => chiediCestinaRilievo(r) },
+      { l: 'Elimina rilievo', ic: 'cestino', cls: 'peric', fn: () => chiediCestinaRilievo(r) },
     ] });
   },
   'menu-stato': el => { const r = S.rilievi.get(el.dataset.id); sheet({ titolo: 'Stato del rilievo', voci: ['Bozza', 'Completato'].map(s => ({ l: s, ic: s === r.stato ? 'check' : '', cls: s === r.stato ? 'attuale' : '', fn: () => cambiaStato(r, s) })) }); },
@@ -1746,7 +1803,7 @@ const AZ = {
       n && { l: 'Duplica stanza', nota: `Copia anche ${n === 1 ? 'il suo articolo' : `i suoi ${n} articoli`}`, ic: 'duplica', fn: () => { const nuova = duplicaStanza(r, s); ridisegna(); document.getElementById('s-' + nuova.id)?.scrollIntoView({ block: 'start' }); toast(`Creata «${nuova.nome}»: ora cambia le misure`); } },
       iv > 0 && { l: 'Sposta su', ic: 'su', fn: () => { scambia(r, s, vis[iv - 1]); } },
       iv < vis.length - 1 && { l: 'Sposta giù', ic: 'giu', fn: () => { scambia(r, s, vis[iv + 1]); } },
-      { l: 'Sposta nel cestino', nota: n ? `Con ${n === 1 ? 'il suo articolo' : `i suoi ${n} articoli`}` : '', ic: 'cestino', cls: 'peric', fn: () => { cestinaConAnnulla('stanza', s, r, `Stanza «${s.nome}» nel cestino`); ridisegna(); } },
+      { l: 'Elimina stanza', nota: n ? `Con ${n === 1 ? 'il suo articolo' : `i suoi ${n} articoli`}` : '', ic: 'cestino', cls: 'peric', fn: () => { cestinaConAnnulla('stanza', s, r, `Stanza «${s.nome}» eliminata`); ridisegna(); } },
     ].filter(Boolean) });
   },
   'nuovo-art': el => {
@@ -1818,7 +1875,7 @@ const AZ = {
       { l: 'Cambia stanza', ic: 'sposta', fn: () => AZ['sposta-articolo']() },
       simili && { l: 'Applica queste scelte a tutti', nota: `Agli altri ${simili} dello stesso tipo nel rilievo`, ic: 'categoria', fn: () => applicaATutti(a) },
       { l: 'Cambia tipo di articolo', nota: 'Misure e note restano', ic: 'categoria', fn: () => cambiaCategoria(a) },
-      { l: 'Sposta nel cestino', ic: 'cestino', cls: 'peric', fn: () => { torna(`r/${r.id}`); cestinaConAnnulla('articolo', a, null, 'Articolo spostato nel cestino'); } },
+      { l: 'Elimina articolo', ic: 'cestino', cls: 'peric', fn: () => { torna(`r/${r.id}`); cestinaConAnnulla('articolo', a, null, 'Articolo eliminato'); } },
     ].filter(Boolean) });
   },
   'sposta-articolo': () => {
@@ -1827,6 +1884,40 @@ const AZ = {
   },
   'vedi-foto': el => vediFoto(el.dataset.id),
   'schizzo': () => { const a = artCorrente(); if (a) nuovoSchizzo(a); },
+
+  // Eliminare (finisce nel cestino, con «Annulla»)
+  'elimina': el => {
+    const { tipo, id } = el.dataset;
+    const sw = el.closest('.scorri');
+    swAperto = null;
+    const sparisci = () => { if (sw) { sw.classList.add('via'); setTimeout(ridisegna, 200); } else ridisegna(); };
+    if (tipo === 'articolo') {
+      const a = S.articoli.get(id); if (!a) return;
+      if (rotta.includes('/a/')) { torna(`r/${a.rilievo_id}`); cestinaConAnnulla('articolo', a, null, 'Articolo eliminato'); return; }
+      cestinaConAnnulla('articolo', a, null, 'Articolo eliminato'); sparisci();
+    } else if (tipo === 'rilievo') {
+      const r = S.rilievi.get(id); if (!r) return;
+      cestinaConAnnulla('rilievo', r, null, 'Rilievo eliminato'); sparisci();
+    } else if (tipo === 'cliente') {
+      const c = S.clienti.get(id); if (!c) return;
+      const n = attivi(S.rilievi).filter(r => r.cliente_id === c.id).length;
+      const fai = () => { if (rotta.startsWith('c/')) torna(''); cestinaConAnnulla('cliente', c, null, 'Cliente eliminato'); };
+      if (n) { chiudiScorri(); conferma({ titolo: `Eliminare ${nomeCliente(c)}?`, testo: `Vengono eliminati anche i suoi ${plur(n, 'rilievo', 'rilievi')}. Li ritrovi nel cestino.`, si: 'Elimina', peric: true, fn: () => { fai(); ridisegna(); } }); return; }
+      fai(); if (!rotta.startsWith('c/')) sparisci();
+    }
+    vibra();
+  },
+  'filtro-rapido': el => { UI.tab = 'rilievi'; UI.filtro = UI.filtro === el.dataset.f ? 'tutti' : el.dataset.f; UI.cerca = ''; ridisegna(); },
+  'elimina-sempre': el => {
+    conferma({ titolo: 'Eliminare per sempre?', testo: 'Non si potrà più recuperare in nessun modo.', si: 'Elimina per sempre', peric: true,
+      fn: async () => { await eliminaPerSempre([el.dataset.g]); $('#cestino').innerHTML = vociCestino(); toast('Eliminato per sempre'); } });
+  },
+  'svuota-cestino': () => {
+    const g = gruppiCestino();
+    if (!g.size) return;
+    conferma({ titolo: 'Svuotare il cestino?', testo: g.size === 1 ? '1 elemento verrà eliminato per sempre. Non si potrà più recuperare.' : `${g.size} elementi verranno eliminati per sempre. Non si potranno più recuperare.`, si: 'Svuota il cestino', peric: true,
+      fn: async () => { const att = attesa('Elimino…'); await eliminaPerSempre([...g]); att.chiudi(); $('#cestino').innerHTML = vociCestino(); toast('Cestino svuotato'); } });
+  },
 
   // Impostazioni e cestino
   'imp-scelta': el => { S.imp[el.dataset.k] = el.dataset.v; salva('impostazioni', S.imp); applicaAspetto(); ridisegna(); },
@@ -1866,8 +1957,8 @@ function cambiaStato(r, stato) {
   else fai();
 }
 function chiediCestinaRilievo(r) {
-  conferma({ titolo: 'Spostare il rilievo nel cestino?', testo: 'Potrai ripristinarlo quando vuoi da Impostazioni → Cestino.', si: 'Sposta nel cestino', peric: true,
-    fn: () => { torna(''); cestinaConAnnulla('rilievo', r, null, 'Rilievo spostato nel cestino'); } });
+  conferma({ titolo: 'Eliminare questo rilievo?', testo: 'Finisce nel cestino (Impostazioni → Cestino): puoi recuperarlo finché non lo elimini per sempre.', si: 'Elimina', peric: true,
+    fn: () => { torna(''); cestinaConAnnulla('rilievo', r, null, 'Rilievo eliminato'); } });
 }
 function duplicaRilievo(r) {
   const t = ora();
@@ -1915,9 +2006,59 @@ async function vediFirma(r) {
 }
 
 /* =========================================================
+   Trascinare a sinistra per eliminare (come nelle app di iPhone)
+   ========================================================= */
+let swAperto = null, bloccaClick = 0;
+const SW = { el: null, id: null, x0: 0, y0: 0, x: 0, base: 0, larg: 0, modo: null };
+function chiudiScorri(el = swAperto) {
+  if (!el) return;
+  const c = el.querySelector('.scorri-c');
+  c.style.transform = '';
+  el.classList.remove('aperto');
+  setTimeout(() => { if (!el.classList.contains('aperto')) el.classList.remove('attivo'); }, 280);
+  if (swAperto === el) swAperto = null;
+}
+document.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  const el = e.target.closest('.scorri');
+  if (swAperto && (!el || el !== swAperto)) { chiudiScorri(); bloccaClick = Date.now() + 400; return; }
+  if (!el || e.target.closest('.scorri-az')) return;
+  if (el === swAperto) { chiudiScorri(); bloccaClick = Date.now() + 400; return; }
+  SW.el = el; SW.id = e.pointerId; SW.x0 = e.clientX; SW.y0 = e.clientY; SW.x = 0; SW.modo = null; SW.base = 0;
+});
+document.addEventListener('pointermove', e => {
+  if (!SW.el || e.pointerId !== SW.id) return;
+  const dx = e.clientX - SW.x0, dy = e.clientY - SW.y0;
+  if (!SW.modo) {
+    if (Math.abs(dx) < 9 && Math.abs(dy) < 9) return;
+    SW.modo = Math.abs(dx) > Math.abs(dy) * 1.3 && dx < 0 ? 'x' : 'y';
+    if (SW.modo === 'x') { SW.larg = SW.el.querySelector('.scorri-az').offsetWidth || 82; SW.el.classList.add('attivo'); SW.el.querySelector('.scorri-c').style.transition = 'none'; }
+  }
+  if (SW.modo !== 'x') return;
+  let x = SW.base + dx;
+  if (x > 0) x = 0;
+  if (x < -SW.larg) x = -SW.larg + (x + SW.larg) * 0.3;
+  SW.x = x;
+  SW.el.querySelector('.scorri-c').style.transform = `translateX(${x}px)`;
+});
+function fineScorri() {
+  if (!SW.el) return;
+  const el = SW.el, modo = SW.modo; SW.el = null;
+  if (modo !== 'x') return;
+  bloccaClick = Date.now() + 400;
+  const c = el.querySelector('.scorri-c');
+  c.style.transition = '';
+  if (SW.x < -SW.larg * 0.4) { c.style.transform = `translateX(${-SW.larg}px)`; el.classList.add('aperto'); swAperto = el; vibra(); }
+  else chiudiScorri(el);
+}
+document.addEventListener('pointerup', fineScorri);
+document.addEventListener('pointercancel', fineScorri);
+
+/* =========================================================
    Eventi
    ========================================================= */
 document.addEventListener('click', e => {
+  if (Date.now() < bloccaClick && !e.target.closest('.scorri-az')) { e.preventDefault(); e.stopPropagation(); return; }
   const link = e.target.closest('a[href^="#/"]');
   if (link) { e.preventDefault(); vai(decodeURIComponent(link.getAttribute('href').slice(2))); return; }
   const el = e.target.closest('[data-act]');
